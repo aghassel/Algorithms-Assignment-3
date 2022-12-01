@@ -169,9 +169,24 @@ def buildTriangles( slice0, slice1 ):
     #
     # [1 mark] 
 
+    #lots of print statements were used for debugging
+    #print(slice0.verts, slice1.verts)  
+    closestDist = length(subtract(slice0.verts[0].coords, slice1.verts[0].coords))
+    closestPair = {
+        'slice0': slice0.verts.index(slice0.verts[0]), 
+        'slice1': slice0.verts.index(slice0.verts[0])}
 
-    # [YOUR CODE HERE]
-
+    for v0 in (slice0.verts[1:]):      
+        for v1 in slice1.verts[1:]:
+            tempDist = length(subtract(v0.coords,v1.coords))
+            if tempDist < closestDist:
+                closestDist = tempDist
+                closestPair.update({
+                    'slice0' :  slice0.verts.index(v0),
+                    'slice1' :  slice1.verts.index(v1)
+                })
+    #print(closestPair)
+    #print(closestDist)
 
     # Make a cyclic permutation of the vertices of each slice,
     # that starts at the closest vertex in each slice found above.
@@ -180,10 +195,11 @@ def buildTriangles( slice0, slice1 ):
     # triangulation ends up on the same edge as it started.
     #
     # [1 mark]
+    
+    #add three lists composed of after closest pair index, before closest pair index, and the closest pair index
 
-
-    # [YOUR CODE HERE]
-
+    cyclicPerm_s0 = slice0.verts[closestPair.get('slice0'):] + slice0.verts[:closestPair.get('slice0')] + [slice0.verts[closestPair.get('slice0')]]
+    cyclicPerm_s1 = slice1.verts[closestPair.get('slice1'):] + slice1.verts[:closestPair.get('slice1')] + [slice1.verts[closestPair.get('slice1')]]
 
     # Set up the 'minArea' array.  The first dimension (rows) of the
     # array corresponds to vertices in slice1.  The second dimension
@@ -195,14 +211,21 @@ def buildTriangles( slice0, slice1 ):
     # row or previous column.
     #
     # [1 mark]
+    
+    minArea, minDir = [], []
+    rows, cols= len(cyclicPerm_s1), len(cyclicPerm_s0)
 
+    for i in range(rows):
+        col = []
+        for j in range(cols):
+            col.append(0)
+        minArea.append(col)
 
-    # [YOUR CODE HERE]
-
-
-    minArea = [[None]] # CHANGE THIS
-    minDir  = [[None]] # CHANGE THIS
-
+    for i in range(rows):
+        col = []
+        for j in range(cols):
+            col.append(0)
+        minDir.append(col)
 
     # Fill in the minArea array
 
@@ -212,25 +235,32 @@ def buildTriangles( slice0, slice1 ):
     #
     # [2 marks]
 
-
-    # [YOUR CODE HERE]
-
-
+    #using formula from Prof's Slides for dynamic programming: Minimum Area Contour
+    for col in range(1, len(cyclicPerm_s0)):
+        minArea[0][col] = minArea[0][col-1] + triangleArea(cyclicPerm_s0[col-1].coords,cyclicPerm_s1[0].coords,cyclicPerm_s0[col].coords) 
+        minDir[0][col] = Dir.PREV_COL
+    #print(minArea)
+    
     # Fill in col 0 of minArea and minDir, since it's a special case as there's no col -1
     #
     # [2 marks]
-    
-
-    # [YOUR CODE HERE]
-
+    for row in range(1, len(cyclicPerm_s1)):
+        minArea[row][0] = minArea[row-1][0] + triangleArea(cyclicPerm_s1[row-1].coords,cyclicPerm_s0[0].coords,cyclicPerm_s1[row].coords) 
+        minDir[row][0] = Dir.PREV_ROW
 
     # Fill in the remaining entries of minArea and minDir.  This is very similar to the above, but more general.
-    #
     # [2 marks]
 
-
-    # [YOUR CODE HERE]
-
+    #using formula from Prof's Slides for dynamic programming: Minimum Area Contour
+    for row in range (1,len(cyclicPerm_s1)):
+        for col in range(1,len(cyclicPerm_s0)):
+            minArea[row][col] = min((minArea[row][col-1] + triangleArea(cyclicPerm_s0[col].coords, cyclicPerm_s0[col-1].coords, cyclicPerm_s1[row].coords)), (minArea[row-1][col] + triangleArea(cyclicPerm_s1[row-1].coords, cyclicPerm_s1[row].coords, cyclicPerm_s0[col].coords)))
+            
+            #check where the minimum area came from
+            if minArea[row][col] == minArea[row][col-1] + triangleArea(cyclicPerm_s0[col].coords, cyclicPerm_s0[col-1].coords, cyclicPerm_s1[row].coords):
+                minDir[row][col] = Dir.PREV_COL
+            else:
+                minDir[row][col] = Dir.PREV_ROW
 
     # It's useful for debugging at this point to print out the minArea
     # and minDir arrays together.  For example, print a table in which
@@ -280,13 +310,20 @@ def buildTriangles( slice0, slice1 ):
     # [3 marks]
 
     triangles = []
+    r,c = len(slice1.verts), len(slice0.verts)
+    while True:
+        # if we are at the beginning
+        if r == 0 and c == 0:
+            break
 
-
-    # [YOUR CODE HERE]
-
-
+        if minDir[r][c] == Dir.PREV_COL:
+            triangles.append(Triangle([cyclicPerm_s0[c-1], cyclicPerm_s1[r], cyclicPerm_s0[c]]))
+            c -= 1
+        else:
+            triangles.append(Triangle([cyclicPerm_s1[r-1], cyclicPerm_s1[r], cyclicPerm_s0[c]]))
+            r -= 1
+        
     # Return a list of the triangles that you constructed
-    
     return triangles
 
 
